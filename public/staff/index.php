@@ -4,17 +4,17 @@ declare(strict_types=1);
 require __DIR__ . '/../../app/staff.php';
 
 startStaffSession();
-$isStaff = isset($_SESSION['staff_id']);
+$account = signedInStaff();
 $action = input($_POST, 'action');
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!$isStaff && $action !== 'login') {
+    if (!$account && $action !== 'login') {
         http_response_code(403);
         $error = 'Sign in to make changes.';
     } elseif (!validCsrf()) {
         http_response_code(403);
         $error = 'This form expired. Reload the page and try again.';
-    } elseif (!$isStaff) {
+    } elseif (!$account) {
         $username = input($_POST, 'username');
         $password = is_string($_POST['password'] ?? null) ? $_POST['password'] : '';
         if (($_SESSION['retry_after'] ?? 0) > time()) {
@@ -22,9 +22,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $user = query('SELECT id, password_hash FROM staff_users WHERE username = ?', [$username])->fetch();
             $hash = $user['password_hash'] ?? '$2y$12$Xv32lcY1UK0c36JKNi3jduNiTaLJVY3Yzb1Yw8lBQXgR8aV.hO9f2';
-            if (strlen($password) <= 72 && password_verify($password, $hash) && $user) {
-                session_regenerate_id(true);
-                $_SESSION = ['staff_id' => $user['id'], 'csrf' => bin2hex(random_bytes(32))];
+            if (strlen($password) <= 72 && !str_contains($password, "\0") && password_verify($password, $hash) && $user) {
+                signInStaff($user);
                 redirect('index.php');
             }
             $attempts = (int) ($_SESSION['failed_logins'] ?? 0) + 1;
@@ -36,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } else {
         try {
-            handleStaffAction($action);
+            handleStaffAction($action, $account);
         } catch (StaffValidation $exception) {
             http_response_code(422);
             $error = $exception->getMessage();
@@ -52,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-if (!$isStaff) {
+if (!$account) {
     pageStart('Staff sign in', '../', true);
     ?>
     <section class="hero"><h1>Staff sign in</h1></section>
@@ -69,7 +68,7 @@ if (!$isStaff) {
 }
 
 $view = input($_GET, 'view');
-$view = in_array($view, ['studies', 'study', 'tags', 'locations'], true) ? $view : 'studies';
+$view = in_array($view, ['studies', 'study', 'tags', 'locations', 'account'], true) ? $view : 'studies';
 $notice = $_SESSION['notice'] ?? '';
 unset($_SESSION['notice']);
 require __DIR__ . '/../../app/staff-views.php';

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-require __DIR__ . '/../app/bootstrap.php';
+require __DIR__ . '/../app/staff.php';
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(404);
@@ -9,7 +9,7 @@ if (PHP_SAPI !== 'cli') {
 }
 
 $username = $argv[1] ?? '';
-if (!preg_match('/\A[a-zA-Z0-9][a-zA-Z0-9_.-]{2,63}\z/', $username)) {
+if (!staffUsernameIsValid($username)) {
     fwrite(STDERR, "Usage: php bin/create-staff.php USERNAME\nUsernames must be 3–64 letters, digits, dots, underscores, or hyphens.\n");
     exit(1);
 }
@@ -32,7 +32,7 @@ try {
     }
 }
 $password = rtrim($line === false ? '' : $line, "\r\n");
-if (!mb_check_encoding($password, 'UTF-8') || mb_strlen($password) < 12 || strlen($password) > 72 || str_contains($password, "\0")) {
+if (!staffPasswordIsValid($password)) {
     fwrite(STDERR, "Use a password with at least 12 characters and at most 72 bytes.\n");
     exit(1);
 }

@@ -52,6 +52,8 @@ Listen 127.0.0.1:8085
 
 Check the configuration with `sudo /opt/lampp/bin/apachectl -t`, then restart Apache. Open [ShelfIT](http://127.0.0.1:8085/) and select **Staff editor** to sign in. Keep the pilot on localhost. Use HTTPS and restrict administrative tools before making the site accessible across the campus network.
 
+Staff can change their own username or password under **Staff editor → Account** by entering their current password. Changing the password signs the account out of its other sessions.
+
 ## Pilot workflow
 
 1. In **Shelf locations**, create sections, then cabinets, then shelves. Use the labels printed in the library. Set lower sort numbers for locations that should appear earlier in the diagram.

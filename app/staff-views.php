@@ -111,7 +111,13 @@ function locationForm(string $kind, array $layout, array $record = []): void
     <?php
 }
 
-$headings = ['studies' => 'Manage studies', 'study' => 'Study record', 'tags' => 'Manage subjects', 'locations' => 'Manage shelf locations'];
+$headings = [
+    'studies' => 'Manage studies',
+    'study' => 'Study record',
+    'tags' => 'Manage subjects',
+    'locations' => 'Manage shelf locations',
+    'account' => 'Your account',
+];
 $studyId = id($_GET['id'] ?? null);
 $record = [];
 $studyMissing = false;
@@ -128,6 +134,7 @@ pageStart($headings[$view], '../', true);
     <a class="button" href="<?= h(staffUrl()) ?>" <?= in_array($view, ['studies', 'study'], true) ? 'aria-current="page"' : '' ?>>Studies</a>
     <a class="button" href="<?= h(staffUrl('tags')) ?>" <?= $view === 'tags' ? 'aria-current="page"' : '' ?>>Subjects</a>
     <a class="button" href="<?= h(staffUrl('locations')) ?>" <?= $view === 'locations' ? 'aria-current="page"' : '' ?>>Shelf locations</a>
+    <a class="button" href="<?= h(staffUrl('account')) ?>" <?= $view === 'account' ? 'aria-current="page"' : '' ?>>Account</a>
     <form method="post"><?php staffForm('logout'); ?><button type="submit">Sign out</button></form>
 </nav>
 <section class="hero"><h1><?= h($headings[$view]) ?></h1></section>
@@ -266,6 +273,25 @@ pageStart($headings[$view], '../', true);
             </details>
         <?php endforeach; ?>
     </div>
+
+<?php elseif ($view === 'account'): ?>
+    <form method="post" class="panel stack narrow" data-validate>
+        <?php staffForm('account-save'); ?>
+        <label>Username
+            <input name="username" autocomplete="username" minlength="3" maxlength="64"
+                value="<?= h($error && $action === 'account-save' ? input($_POST, 'username') : $account['username']) ?>" required>
+        </label>
+        <label>Current password
+            <input type="password" name="current_password" autocomplete="current-password" required>
+        </label>
+        <fieldset class="stack">
+            <legend>Change password</legend>
+            <p class="muted">Use at least 12 characters. Leave both fields blank to keep your current password.</p>
+            <label>New password <input type="password" name="new_password" autocomplete="new-password" minlength="12"></label>
+            <label>Confirm new password <input type="password" name="confirm_password" autocomplete="new-password" minlength="12"></label>
+        </fieldset>
+        <div><button class="primary" type="submit">Save account</button></div>
+    </form>
 
 <?php elseif ($view === 'locations'): ?>
     <?php $layout = locations(); ?>
