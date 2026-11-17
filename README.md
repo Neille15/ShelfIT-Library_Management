@@ -59,5 +59,6 @@ Check the configuration with `sudo /opt/lampp/bin/apachectl -t`, then restart Ap
 3. Add a physical copy with its unique copy ID. Leave all location fields blank until staff verify the shelf. When a copy moves, save the new location in its copy form.
 4. Search for the new study in **Catalog** and compare the directions and highlighted shelf against the physical copy. Confirm the Excel fields and verify the pilot records with library staff before expanding.
 5. Export the `shelfit` database from phpMyAdmin for backups. Archive a study to remove it from public search while keeping its record and copies.
+6. To remove an archived study permanently, open it from **Show archived studies**, expand **Delete permanently**, and confirm. Its copy records and subject assignments are removed with the study. Shared subjects and shelf locations are preserved.
 
 The imported schema starts with an empty catalog. Confirm access to physical copies with library staff.

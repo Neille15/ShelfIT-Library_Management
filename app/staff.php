@@ -158,6 +158,28 @@ function saveCopy(): never
     staffDone('Copy saved.', staffUrl('study', ['id' => $studyId]));
 }
 
+function deleteArchivedStudy(int $studyId): never
+{
+    db()->beginTransaction();
+    try {
+        $study = query('SELECT archived_at FROM studies WHERE id = ? FOR UPDATE', [$studyId])->fetch();
+        if (!$study) {
+            throw new StaffValidation('That study could not be found.');
+        }
+        if ($study['archived_at'] === null) {
+            throw new StaffValidation('Archive the study before deleting it permanently.');
+        }
+
+        query('DELETE FROM copies WHERE study_id = ?', [$studyId]);
+        query('DELETE FROM studies WHERE id = ?', [$studyId]);
+        db()->commit();
+    } catch (Throwable $error) {
+        db()->rollBack();
+        throw $error;
+    }
+    staffDone('Archived study permanently deleted.', staffUrl('studies', ['archived' => 1]));
+}
+
 function saveLocation(): never
 {
     $kind = input($_POST, 'kind');
@@ -208,6 +230,8 @@ function handleStaffAction(string $action): never
             $timestamp = $archive ? 'CURRENT_TIMESTAMP' : 'NULL';
             query("UPDATE studies SET archived_at = $timestamp WHERE id = ?", [$studyId]);
             staffDone($archive ? 'Study archived.' : 'Study restored.', staffUrl('study', ['id' => $studyId]));
+        case 'study-delete':
+            deleteArchivedStudy(id($_POST['study_id'] ?? null));
         case 'copy-save':
             saveCopy();
         case 'copy-delete':

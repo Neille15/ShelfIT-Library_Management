@@ -216,6 +216,17 @@ pageStart($headings[$view], '../', true);
                         <button type="submit"><?= $record['archived_at'] === null ? 'Archive study' : 'Restore to catalog' ?></button>
                     </form>
                 </div>
+                <?php if ($record['archived_at'] !== null): ?>
+                    <details class="panel">
+                        <summary>Delete permanently</summary>
+                        <form method="post" class="stack detail-body">
+                            <?php staffForm('study-delete'); ?>
+                            <input type="hidden" name="study_id" value="<?= h($studyId) ?>">
+                            <p>This permanently removes the study and its physical copy records. This action cannot be undone.</p>
+                            <div><button class="danger" type="submit">Permanently delete study</button></div>
+                        </form>
+                    </details>
+                <?php endif; ?>
             <?php endif; ?>
         </section>
         <section class="stack">
