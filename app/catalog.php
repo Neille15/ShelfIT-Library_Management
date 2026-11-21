@@ -93,35 +93,24 @@ function locationText(array $copy): string
     return implode(' → ', [$copy['section_label'], $copy['cabinet_label'], $copy['shelf_label']]);
 }
 
-function drawLocator(?array $copy, array $locations): void
+function catalogChoices(): array
 {
-    ?>
-    <p class="directions"><?= h($copy ? locationText($copy) : 'No physical copies are listed. Ask library staff for help.') ?></p>
-    <?php if ($copy && $copy['shelf_id'] !== null): ?>
-        <h3><?= h($copy['section_label']) ?></h3>
-        <div class="shelf-map" aria-label="<?= h($copy['section_label']) ?> shelf diagram">
-            <?php foreach ($locations['cabinets'] as $cabinet):
-                if ($cabinet['section_id'] !== $copy['section_id']) {
-                    continue;
-                }
-                ?>
-                <section class="cabinet <?= $cabinet['id'] === $copy['cabinet_id'] ? 'cabinet-selected' : '' ?>">
-                    <h4><?= h($cabinet['label']) ?></h4>
-                    <ul>
-                        <?php foreach ($locations['shelves'] as $shelf):
-                            if ($shelf['cabinet_id'] !== $cabinet['id']) {
-                                continue;
-                            }
-                            $selected = $shelf['id'] === $copy['shelf_id'];
-                            ?>
-                            <li <?= $selected ? 'class="shelf-selected" aria-current="location"' : '' ?>>
-                                <?= h($shelf['label']) ?><?= $selected ? ' · Selected' : '' ?>
-                            </li>
-                        <?php endforeach; ?>
-                    </ul>
-                </section>
-            <?php endforeach; ?>
-        </div>
-        <p class="muted">Ask library staff to confirm access to this copy.</p>
-    <?php endif;
+    $programs = query('SELECT DISTINCT program FROM studies WHERE archived_at IS NULL ORDER BY program')->fetchAll(PDO::FETCH_COLUMN);
+    $years = query('SELECT DISTINCT academic_year FROM studies WHERE archived_at IS NULL ORDER BY academic_year DESC')->fetchAll(PDO::FETCH_COLUMN);
+    $tags = query('SELECT t.id, t.name FROM tags t WHERE EXISTS (
+        SELECT 1 FROM study_tags st JOIN studies s ON s.id = st.study_id
+        WHERE st.tag_id = t.id AND s.archived_at IS NULL
+    ) ORDER BY t.name')->fetchAll();
+    return compact('programs', 'years', 'tags');
+}
+
+function findStudy(int $studyId, bool $publicOnly = true): array
+{
+    $visibility = $publicOnly ? ' AND archived_at IS NULL' : '';
+    return query("SELECT * FROM studies WHERE id = ?$visibility", [$studyId])->fetch() ?: [];
+}
+
+function subjects(): array
+{
+    return query('SELECT id, name FROM tags ORDER BY name')->fetchAll();
 }

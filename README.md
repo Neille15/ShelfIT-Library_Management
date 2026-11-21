@@ -64,3 +64,38 @@ Staff can change their own username or password under **Staff editor → Account
 6. To remove an archived study permanently, open it from **Show archived studies**, expand **Delete permanently**, and confirm. Its copy records and subject assignments are removed with the study. Shared subjects and shelf locations are preserved.
 
 The imported schema starts with an empty catalog. Confirm access to physical copies with library staff.
+
+## Code organization
+
+ShelfIT uses procedural PHP with separate page templates and one staff form processor:
+
+- `public/` contains browser entry points and assets. Catalog pages load data and render templates. `staff/index.php` displays staff pages; `staff/process.php` accepts POST submissions only. Existing POST submissions to the staff index delegate to the same processor.
+- `app/bootstrap.php` initializes error handling and loads database, general, and presentation helpers. Database configuration still comes from the existing `config.local.php` or `SHELFIT_DB_*` environment variables.
+- `app/catalog.php` loads catalog data. `app/staff/` separates authentication/account logic, validation, studies/copies, subjects, locations, action dispatch, data loading, and rendering helpers.
+- `templates/` contains the shared header/footer, catalog pages, shelf diagram, and staff forms/pages. Templates do not execute SQL. View selection uses fixed paths in a switch; request input never becomes an include path.
+
+All staff mutations pass through the same authentication and CSRF checks before dispatch. Keep queries parameterized, dynamic SQL identifiers allowlisted, displayed values escaped, and passwords hashed. Study/tag updates and permanent deletion retain their transactions. Password changes invalidate other sessions.
+
+Updating an existing installation requires no database import or migration. Keep the current database and private configuration, and keep Apache's document root set to `public/`. Deploy the complete `app/`, `templates/`, and `public/` directories together.
+
+### Regression checks
+
+Run syntax checks with XAMPP PHP:
+
+```bash
+find app public templates bin -name '*.php' -exec /opt/lampp/bin/php -l {} \;
+```
+
+Run the integration suite with Python 3 and a local XAMPP installation:
+
+```bash
+python3 tests/integration.py
+```
+
+The suite starts temporary MariaDB and PHP servers, creates its own test database and staff account, and stops both servers afterward. It never connects to the configured ShelfIT database. Override `SHELFIT_TEST_XAMPP` if XAMPP is installed elsewhere. Tests cover authentication/CSRF gates, private-file access, escaped output, staff workflows, transaction rollback, pagination, and password-change session invalidation.
+
+For optional browser checks, set `SHELFIT_TEST_PLAYWRIGHT` to an installed Playwright module path before running the suite. Set `SHELFIT_TEST_BROWSER_BIN` to use an existing Chromium-compatible browser, and `SHELFIT_TEST_SCREENSHOTS` to an existing screenshot directory if needed. These checks submit the actual forms and check navigation and layout at 1024px and 320px.
+
+### Remaining login hardening
+
+The current sign-in delay is session-based, so starting a fresh session bypasses it. Before expanding beyond the localhost pilot, add persistent account/source throttling as a separate security change. The restructuring retains the existing behavior.
