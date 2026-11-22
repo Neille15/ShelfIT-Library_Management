@@ -13,12 +13,22 @@ startStaffSession();
 $account = signedInStaff();
 $action = input($_POST, 'action');
 $error = '';
-if (!$account && $action !== 'login') {
+if (!$account && !in_array($action, ['login', 'password-reset', 'recovery-code-reset'], true)) {
     http_response_code(403);
     $error = 'Sign in to make changes.';
 } elseif (!validCsrf()) {
     http_response_code(403);
     $error = 'This form expired. Reload the page and try again.';
+} elseif (in_array($action, ['password-reset', 'recovery-code-reset'], true)) {
+    try {
+        if ($action === 'recovery-code-reset') {
+            resetWithRecoveryCode();
+        }
+        resetStaffPassword();
+    } catch (StaffValidation $exception) {
+        http_response_code(422);
+        $error = $exception->getMessage();
+    }
 } elseif (!$account) {
     $error = attemptStaffLogin();
 } else {
@@ -36,6 +46,19 @@ if (!$account && $action !== 'login') {
         };
         http_response_code(422);
     }
+}
+
+if ($action === 'recovery-code-reset') {
+    header('Referrer-Policy: no-referrer');
+    require __DIR__ . '/../../templates/staff/forgot.php';
+    exit;
+}
+
+if ($action === 'password-reset') {
+    header('Referrer-Policy: no-referrer');
+    $canReset = validPasswordReset($_SESSION['password_reset_token'] ?? '');
+    require __DIR__ . '/../../templates/staff/reset.php';
+    exit;
 }
 
 if (!$account) {

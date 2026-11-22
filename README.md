@@ -54,6 +54,30 @@ Check the configuration with `sudo /opt/lampp/bin/apachectl -t`, then restart Ap
 
 Staff can change their own username or password under **Staff editor → Account** by entering their current password. Changing the password signs the account out of its other sessions.
 
+### Recover a forgotten staff password
+
+While signed in, open **Account → Password recovery codes**, enter your current password, and select **Generate new recovery codes**. Save the eight codes in a password manager or print them: the full codes are shown only once. Generating another set invalidates every previous code.
+
+If you forget your password, select **Forgot password?** on the sign-in page. Enter your username, an unused recovery code, and the new password twice. After a successful reset, sign in with the new password. The used code cannot be reused; the remaining codes stay valid. Five incorrect code attempts for an account pause recovery-code verification for 15 minutes, including across new browser sessions. Codes contain 128 random bits, accept upper/lowercase and optional spaces/hyphens, and are stored only as hashes in private files under `.shelfit-local/recovery-codes/`.
+
+Recovery codes are saved until used or replaced; they do not have the 15-minute expiration of a terminal-generated link. Anyone with a code can reset the account password, so keep codes private. Keep the private recovery directory protected and include it in restricted backups. Both recovery methods update the existing database's password hash and invalidate existing sessions. No database migration is required.
+
+The login password is hidden by default. Use **Show** to reveal it and **Hide** to mask it again; these buttons do not submit the form.
+
+#### Server-assisted fallback
+
+If you lost both the password and recovery codes, the person who manages the server can generate a private, one-time recovery link from the repository directory:
+
+```bash
+/opt/lampp/bin/php bin/create-password-reset.php librarian
+```
+
+Replace `librarian` with the existing staff username. The command prints a link for `http://localhost:8085`; pass the site's base URL as a second argument if needed. For example, append `https://library.example.edu` when using HTTPS hosting. The URL is supplied by the server operator rather than a browser request.
+
+Open the private link within 15 minutes. Enter **New password** and **Confirm password**, then select **Update password**. The password must match in both fields and contain at least 12 characters and at most 72 bytes. The existing database is updated with a password hash, the link becomes unusable, and previous sessions are invalidated. Sign in again with the new password.
+
+Generating another link for the same account replaces its previous link. Recovery records contain only a hash of the random token, a password stamp, and an expiration time in the ignored `.shelfit-local/password-resets/` directory outside the public document root. No database migration is required. Run the command as the same operating-system user as the Apache runtime so it can access these private files. Do not share recovery links except with the account owner.
+
 ## Pilot workflow
 
 1. In **Shelf locations**, create sections, then cabinets, then shelves. Use the labels printed in the library. Set lower sort numbers for locations that should appear earlier in the diagram.
@@ -74,11 +98,11 @@ ShelfIT uses procedural PHP with separate page templates and one staff form proc
 - `app/catalog.php` loads catalog data. `app/staff/` separates authentication/account logic, validation, studies/copies, subjects, locations, action dispatch, data loading, and rendering helpers.
 - `templates/` contains the shared header/footer, catalog pages, shelf diagram, and staff forms/pages. Templates do not execute SQL. View selection uses fixed paths in a switch; request input never becomes an include path.
 
-All staff mutations pass through the same authentication and CSRF checks before dispatch. Keep queries parameterized, dynamic SQL identifiers allowlisted, displayed values escaped, and passwords hashed. Study/tag updates and permanent deletion retain their transactions. Password changes invalidate other sessions.
+All staff mutations pass through the shared processor and CSRF checks. Normal staff actions require sign-in; password recovery requires an unused recovery code or a valid, unexpired one-time recovery link generated from the server terminal. Keep queries parameterized, dynamic SQL identifiers allowlisted, displayed values escaped, and passwords hashed. Study/tag updates and permanent deletion retain their transactions. Password changes invalidate other sessions.
 
 Updating an existing installation requires no database import or migration. Keep the current database and private configuration, and keep Apache's document root set to `public/`. Deploy the complete `app/`, `templates/`, and `public/` directories together.
 
-### Regression checks
+### Local viewing and syntax checks
 
 Run syntax checks with XAMPP PHP:
 
@@ -86,15 +110,7 @@ Run syntax checks with XAMPP PHP:
 find app public templates bin -name '*.php' -exec /opt/lampp/bin/php -l {} \;
 ```
 
-Run the integration suite with Python 3 and a local XAMPP installation:
-
-```bash
-python3 tests/integration.py
-```
-
-The suite starts temporary MariaDB and PHP servers, creates its own test database and staff account, and stops both servers afterward. It never connects to the configured ShelfIT database. Override `SHELFIT_TEST_XAMPP` if XAMPP is installed elsewhere. Tests cover authentication/CSRF gates, private-file access, escaped output, staff workflows, transaction rollback, pagination, and password-change session invalidation.
-
-For optional browser checks, set `SHELFIT_TEST_PLAYWRIGHT` to an installed Playwright module path before running the suite. Set `SHELFIT_TEST_BROWSER_BIN` to use an existing Chromium-compatible browser, and `SHELFIT_TEST_SCREENSHOTS` to an existing screenshot directory if needed. These checks submit the actual forms and check navigation and layout at 1024px and 320px.
+View the local installation at [http://localhost:8085/](http://localhost:8085/). It uses the existing `shelfit` database and private database configuration. Start the configured Apache instance and XAMPP MySQL before opening the site.
 
 ### Remaining login hardening
 

@@ -15,3 +15,15 @@
         </fieldset>
         <div><button class="primary" type="submit">Save account</button></div>
     </form>
+    <section class="panel stack narrow">
+        <h2>Password recovery codes</h2>
+        <p>You have <?= h($recoveryCount) ?> unused recovery codes. Save a set now so you can reset a forgotten password without the server terminal.</p>
+        <p>Generating a new set replaces every previous code. The new codes are shown only once.</p>
+        <form method="post" action="<?= h(staffProcessUrl('account')) ?>" class="stack" data-validate>
+            <?php staffForm('recovery-codes-generate'); ?>
+            <label>Current password to generate recovery codes
+                <input type="password" name="current_password" autocomplete="current-password" required>
+            </label>
+            <div><button type="submit">Generate new recovery codes</button></div>
+        </form>
+    </section>

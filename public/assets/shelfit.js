@@ -1,5 +1,33 @@
 'use strict';
 
+for (const dropdown of document.querySelectorAll('[data-account-dropdown]')) {
+    document.addEventListener('click', (event) => {
+        if (!dropdown.contains(event.target)) dropdown.open = false;
+    });
+    dropdown.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && dropdown.open) {
+            dropdown.open = false;
+            dropdown.querySelector('summary').focus();
+        }
+    });
+    dropdown.addEventListener('focusout', (event) => {
+        if (!dropdown.contains(event.relatedTarget)) dropdown.open = false;
+    });
+}
+
+for (const button of document.querySelectorAll('[data-password-toggle]')) {
+    const field = document.getElementById(button.dataset.passwordToggle);
+    if (!field) continue;
+    button.hidden = false;
+    button.addEventListener('click', () => {
+        const show = field.type === 'password';
+        field.type = show ? 'text' : 'password';
+        button.textContent = show ? 'Hide' : 'Show';
+        button.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+        button.setAttribute('aria-pressed', String(show));
+    });
+}
+
 const filters = document.querySelector('[data-catalog-filters]');
 if (filters) {
     filters.addEventListener('change', (event) => {

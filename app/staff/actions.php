@@ -10,6 +10,8 @@ function handleStaffAction(string $action, array $account): never
             redirect('index.php');
         case 'account-save':
             saveStaffAccount($account);
+        case 'recovery-codes-generate':
+            generateRecoveryCodes($account);
         case 'study-save':
             saveStudy();
         case 'study-archive':

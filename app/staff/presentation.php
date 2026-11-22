@@ -36,7 +36,7 @@ function renderStaffPage(array $account, string $error = '', string $action = ''
             'study-save', 'study-archive', 'study-restore', 'study-delete', 'copy-save', 'copy-delete' => 'study',
             'tag-save', 'tag-delete' => 'tags',
             'location-save', 'location-delete' => 'locations',
-            'account-save' => 'account',
+            'account-save', 'recovery-codes-generate' => 'account',
             default => $view,
         };
         if ($view === 'study') {
@@ -51,6 +51,7 @@ function renderStaffPage(array $account, string $error = '', string $action = ''
         http_response_code(404);
     }
     $notice = $_SESSION['notice'] ?? '';
+    $recoveryCount = $view === 'account' ? recoveryCodeCount($account['id']) : 0;
     unset($_SESSION['notice']);
     require_once __DIR__ . '/../../templates/staff/forms.php';
     require __DIR__ . '/../../templates/staff/page.php';

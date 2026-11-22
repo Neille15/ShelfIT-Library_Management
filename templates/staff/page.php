@@ -8,14 +8,12 @@ $headings = [
     'locations' => 'Manage shelf locations',
     'account' => 'Your account',
 ];
-pageStart($headings[$view], '../', true);
+pageStart($headings[$view], '../', true, $account);
 ?>
 <nav class="staff-nav" aria-label="Staff tools">
     <a class="button" href="<?= h(staffUrl()) ?>" <?= in_array($view, ['studies', 'study'], true) ? 'aria-current="page"' : '' ?>>Studies</a>
     <a class="button" href="<?= h(staffUrl('tags')) ?>" <?= $view === 'tags' ? 'aria-current="page"' : '' ?>>Subjects</a>
     <a class="button" href="<?= h(staffUrl('locations')) ?>" <?= $view === 'locations' ? 'aria-current="page"' : '' ?>>Shelf locations</a>
-    <a class="button" href="<?= h(staffUrl('account')) ?>" <?= $view === 'account' ? 'aria-current="page"' : '' ?>>Account</a>
-    <form method="post" action="<?= h(staffProcessUrl($view, $studyId)) ?>"><?php staffForm('logout'); ?><button type="submit">Sign out</button></form>
 </nav>
 <section class="hero"><h1><?= h($headings[$view]) ?></h1></section>
 <?php if ($error): ?><p role="alert" class="error"><?= h($error) ?></p><?php endif; ?>
