@@ -54,7 +54,118 @@ Check the configuration with `sudo /opt/lampp/bin/apachectl -t`, then restart Ap
 
 Staff can change their own username or password under **Staff editor → Account** by entering their current password. Changing the password signs the account out of its other sessions.
 
-### Recover a forgotten staff password
+## Set up on Windows XAMPP
+
+These steps assume XAMPP is installed at `C:\xampp` and the project is at `C:\Projects\ShelfIT-Library_Management`. Adjust the paths if yours differ. Use PHP 8.2 or newer. Git supplies the code only: each Windows computer needs its own database and ignored `config.local.php`.
+
+### 1. Install XAMPP and get the project
+
+1. Install [XAMPP for Windows](https://www.apachefriends.org/), then open the XAMPP Control Panel and start **Apache** and **MySQL**.
+2. Clone the repository outside `htdocs`, so the default Apache site cannot expose private configuration or recovery files. In PowerShell:
+
+```powershell
+New-Item -ItemType Directory -Force C:\Projects
+Set-Location C:\Projects
+git clone https://github.com/Neille15/ShelfIT-Library_Management.git
+Set-Location C:\Projects\ShelfIT-Library_Management
+```
+
+If `git` is not recognized, install Git for Windows or download and extract the repository instead. If you already cloned it, open that folder instead. Check XAMPP PHP:
+
+```powershell
+& "C:\xampp\php\php.exe" -v
+& "C:\xampp\php\php.exe" -m
+```
+
+Confirm `pdo_mysql` and `mbstring` appear in the module list. If missing, enable their extension entries in `C:\xampp\php\php.ini` and restart Apache. Use XAMPP's PHP executable in all commands below.
+
+### 2. Create or import the local database
+
+1. Open [phpMyAdmin](http://localhost/phpmyadmin/) and sign in using your local database administrator account.
+2. Create `shelfit` with collation `utf8mb4_unicode_ci`. Select it, choose **Import**, and load `schema.sql` for a fresh, empty catalog.
+3. To copy an existing installation, import its SQL export into the Windows database instead. Git does not copy catalog records or staff accounts. Do not replace an existing database when only updating the code.
+4. Under **User accounts**, create `shelfit_app` for host `127.0.0.1` with a unique password. Grant only SELECT, INSERT, UPDATE, and DELETE on the `shelfit` database; leave global privileges unchecked.
+
+### 3. Configure the Windows database connection
+
+From the project folder in PowerShell:
+
+```powershell
+Copy-Item config.example.php config.local.php
+```
+
+For an existing installation, edit its current configuration rather than overwriting it. Replace the Linux socket DSN in `config.local.php` with this TCP configuration:
+
+```php
+<?php
+return [
+    'dsn' => 'mysql:host=127.0.0.1;port=3306;dbname=shelfit;charset=utf8mb4',
+    'user' => 'shelfit_app',
+    'password' => 'REPLACE_WITH_YOUR_DATABASE_PASSWORD',
+];
+```
+
+Use the password from step 2. If MySQL uses a different port, update `3306` to match. Keep this file private and untracked. In Windows folder security settings, allow your Windows account and the Apache runtime account the access they need; Apache also needs write access to `.shelfit-local` for recovery records. Do not grant broad access to other users.
+
+### 4. Create the first staff account
+
+Skip this step if you imported a database that already contains your staff account. From the project folder, use PowerShell's masked credential prompt and pipe the password to the existing PHP script:
+
+```powershell
+$OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+$staffCredential = Get-Credential -UserName "librarian" -Message "Create ShelfIT staff account: use a password with at least 12 characters"
+$staffCredential.GetNetworkCredential().Password | & "C:\xampp\php\php.exe" bin\create-staff.php $staffCredential.UserName
+Remove-Variable staffCredential
+```
+
+The password must contain at least 12 characters and at most 72 bytes. Expect `Staff account created.` The piped input avoids the script's Linux-only `stty` terminal handling. This staff password is separate from the database password in `config.local.php`.
+
+### 5. Serve only the public folder
+
+Back up `C:\xampp\apache\conf\httpd.conf`, then ensure this include is enabled (without a leading `#`):
+
+```apache
+Include conf/extra/httpd-vhosts.conf
+```
+
+Back up `C:\xampp\apache\conf\extra\httpd-vhosts.conf`, then append the following. Use forward slashes in Apache paths. Add the `Listen` line only once across the Apache configuration files:
+
+```apache
+Listen 127.0.0.1:8085
+<VirtualHost 127.0.0.1:8085>
+    ServerName localhost
+    DocumentRoot "C:/Projects/ShelfIT-Library_Management/public"
+    <Directory "C:/Projects/ShelfIT-Library_Management/public">
+        Options -Indexes
+        AllowOverride None
+        Require all granted
+        DirectoryIndex index.php
+    </Directory>
+</VirtualHost>
+```
+
+Check the configuration in PowerShell:
+
+```powershell
+& "C:\xampp\apache\bin\httpd.exe" -t
+```
+
+After `Syntax OK`, stop and start Apache in the XAMPP Control Panel. Open [ShelfIT](http://localhost:8085/) and select **Staff editor** to sign in. No Windows hosts-file edit is needed. The ShelfIT listener is restricted to this computer; this does not change the listeners for other XAMPP sites.
+
+### 6. Verify the setup and recovery
+
+- Confirm the catalog and staff sign-in page load. A fresh database has an empty catalog.
+- Sign in, open **Account → Password recovery codes**, verify your current password, and save the generated codes privately.
+- Confirm `http://localhost:8085/config.local.php` and `http://localhost:8085/.shelfit-local/` return 404. If private files are accessible, correct the document root before continuing.
+- For server-assisted recovery, run this from the project folder, replacing `librarian` with the existing username:
+
+```powershell
+& "C:\xampp\php\php.exe" bin\create-password-reset.php librarian
+```
+
+If Apache will not start, check **Apache → Logs** in the control panel and resolve duplicate `Listen` lines or port conflicts. If the database connection fails, check that MySQL is running and that the DSN port, username, host, and password match. For PHP setup and Apache listener details, see the [XAMPP Windows FAQ](https://www.apachefriends.org/faq_windows.html) and [Apache address and port documentation](https://httpd.apache.org/docs/2.4/bind.html).
+
+## Recover a forgotten staff password
 
 While signed in, open **Account → Password recovery codes**, enter your current password, and select **Generate new recovery codes**. Save the eight codes in a password manager or print them: the full codes are shown only once. Generating another set invalidates every previous code.
 
@@ -64,7 +175,7 @@ Recovery codes are saved until used or replaced; they do not have the 15-minute 
 
 The login password is hidden by default. Use **Show** to reveal it and **Hide** to mask it again; these buttons do not submit the form.
 
-#### Server-assisted fallback
+### Server-assisted fallback
 
 If you lost both the password and recovery codes, the person who manages the server can generate a private, one-time recovery link from the repository directory:
 
